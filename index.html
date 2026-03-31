@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Galerie Liquid Glass</title>
+    <style>
+        /* Arrière-plan animé pour faire ressortir l'effet verre */
+        body {
+            margin: 0;
+            min-height: 100vh;
+            background: linear-gradient(-45deg, #ee7752, #e73c7e, #23a6d5, #23d5ab);
+            background-size: 400% 400%;
+            animation: gradientBG 15s ease infinite;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            color: white;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        @keyframes gradientBG {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+
+        /* Effet Liquid Glass (Glassmorphism) */
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.15);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            border-radius: 20px;
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+            padding: 2rem;
+            margin: 2rem;
+            text-align: center;
+            width: 80%;
+            max-width: 600px;
+        }
+
+        /* Style du bouton d'upload */
+        input[type="file"]::file-selector-button {
+            background: rgba(255, 255, 255, 0.2);
+            border: 1px solid rgba(255, 255, 255, 0.5);
+            padding: 10px 20px;
+            border-radius: 10px;
+            color: white;
+            cursor: pointer;
+            backdrop-filter: blur(5px);
+            font-weight: bold;
+            transition: 0.3s ease;
+        }
+
+        input[type="file"]::file-selector-button:hover {
+            background: rgba(255, 255, 255, 0.4);
+        }
+
+        /* Conteneur de la galerie */
+        #gallery {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 20px;
+            padding: 20px;
+            width: 100%;
+            box-sizing: border-box;
+        }
+
+        /* Style des photos avec effet verre */
+        .photo-card {
+            max-width: 90vw; /* Adapté aux petits écrans et grandes télés */
+            max-height: 80vh;
+            object-fit: contain;
+            border-radius: 15px;
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3);
+            border: 2px solid rgba(255, 255, 255, 0.2);
+            backdrop-filter: blur(4px);
+            background: rgba(255, 255, 255, 0.05);
+            transition: transform 0.3s ease;
+        }
+
+        .photo-card:hover {
+            transform: scale(1.02);
+        }
+
+        /* Responsive : Pour les écrans plus larges (Ordi / Télé) */
+        @media (min-width: 768px) {
+            .photo-card {
+                max-width: 45vw; /* Deux photos par ligne environ */
+            }
+        }
+
+        /* Indicateur de localisation */
+        #geo-status {
+            margin-top: 20px;
+            padding: 10px;
+            border-radius: 10px;
+            background: rgba(0, 0, 0, 0.2);
+            font-size: 0.9em;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="glass-panel" id="ui-panel">
+        <h1>Galerie Aléatoire (Liquid Glass)</h1>
+        <p>Sélectionnez plusieurs photos, elles s'afficheront dans un ordre aléatoire sans se répéter.</p>
+        
+        <input type="file" id="file-input" multiple accept="image/*">
+
+        <div id="geo-status">Recherche de la localisation...</div>
+    </div>
+
+    <div id="gallery"></div>
+
+    <script>
+        /* 1. GESTION DE LA GÉOLOCALISATION */
+        const geoStatus = document.getElementById('geo-status');
+        if ("geolocation" in navigator) {
+            navigator.geolocation.getCurrentPosition(
+                (position) => {
+                    const lat = position.coords.latitude.toFixed(4);
+                    const lon = position.coords.longitude.toFixed(4);
+                    geoStatus.innerText = `📍 Localisation actuelle : Latitude ${lat}, Longitude ${lon}`;
+                },
+                (error) => {
+                    geoStatus.innerText = `📍 Localisation non accessible : ${error.message}`;
+                }
+            );
+        } else {
+            geoStatus.innerText = "📍 Géolocalisation non supportée par votre navigateur.";
+        }
+
+        /* 2. FONCTION DE MÉLANGE ALÉATOIRE (Fisher-Yates Shuffle) */
+        // Cela garantit un ordre totalement aléatoire sans répétition
+        function shuffleArray(array) {
+            let currentIndex = array.length, randomIndex;
+            while (currentIndex !== 0) {
+                randomIndex = Math.floor(Math.random() * currentIndex);
+                currentIndex--;
+                // Échange l'élément actuel avec un élément aléatoire
+                [array[currentIndex], array[randomIndex]] = [array[randomIndex], array[currentIndex]];
+            }
+            return array;
+        }
+
+        /* 3. GESTION DE LA SÉLECTION DES FICHIERS */
+        document.getElementById('file-input').addEventListener('change', (event) => {
+            const files = Array.from(event.target.files);
+            
+            // Si l'utilisateur n'a rien sélectionné, on arrête
+            if(files.length === 0) return;
+
+            // Mélanger le tableau de fichiers
+            const shuffledFiles = shuffleArray(files);
+            const gallery = document.getElementById('gallery');
+            
+            // Vider la galerie avant de la remplir
+            gallery.innerHTML = ''; 
+
+            // Créer et afficher chaque image mélangée
+            shuffledFiles.forEach(file => {
+                const img = document.createElement('img');
+                // Crée une URL temporaire pour afficher le fichier local sans le télécharger
+                img.src = URL.createObjectURL(file);
+                img.className = 'photo-card';
+                
+                // Libérer la mémoire une fois l'image chargée
+                img.onload = () => URL.revokeObjectURL(img.src);
+                
+                gallery.appendChild(img);
+            });
+        });
+    </script>
+
+</body>
+</html>
